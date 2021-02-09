@@ -7,7 +7,7 @@ use crate::avm2::method::NativeMethod;
 use crate::avm2::names::{Namespace, QName};
 use crate::avm2::object::{
     implicit_deriver, ArrayObject, DomainObject, FunctionObject, NamespaceObject, Object,
-    PrimitiveObject, ScriptObject, StageObject, TObject,
+    PrimitiveObject, ScriptObject, StageObject, TObject, ByteArrayObject
 };
 use crate::avm2::scope::Scope;
 use crate::avm2::script::Script;
@@ -46,7 +46,6 @@ fn trace<'gc>(
             message.push_str(&arg.clone().coerce_to_string(activation)?);
         }
     }
-
     activation.context.log.avm_trace(&message);
 
     Ok(Value::Undefined)
@@ -96,6 +95,7 @@ pub struct SystemPrototypes<'gc> {
     pub scene: Object<'gc>,
     pub application_domain: Object<'gc>,
     pub event: Object<'gc>,
+    pub bytearray: Object<'gc>,
 }
 
 impl<'gc> SystemPrototypes<'gc> {
@@ -129,6 +129,7 @@ impl<'gc> SystemPrototypes<'gc> {
             scene: empty,
             application_domain: empty,
             event: empty,
+            bytearray: empty,
         }
     }
 }
@@ -271,6 +272,15 @@ fn array_deriver<'gc>(
     scope: Option<GcCell<'gc, Scope<'gc>>>,
 ) -> Result<Object<'gc>, Error> {
     ArrayObject::derive(base_proto, activation.context.gc_context, class, scope)
+}
+
+fn bytearray_deriver<'gc>(
+    base_proto: Object<'gc>,
+    activation: &mut Activation<'_, 'gc, '_>,
+    class: GcCell<'gc, Class<'gc>>,
+    scope: Option<GcCell<'gc, Scope<'gc>>>,
+) -> Result<Object<'gc>, Error> {
+    ByteArrayObject::derive(base_proto, activation.context.gc_context, class, scope)
 }
 
 fn stage_deriver<'gc>(
@@ -482,6 +492,20 @@ pub fn load_player_globals<'gc>(
         activation,
         flash::events::eventdispatcher::create_class(mc),
         implicit_deriver,
+        domain,
+        script,
+    )?;
+    // package `flash.utils`
+    activation
+        .context
+        .avm2
+        .system_prototypes
+        .as_mut()
+        .unwrap()
+        .bytearray = class(
+        activation,
+        flash::utils::bytearray::create_class(mc),
+        bytearray_deriver,
         domain,
         script,
     )?;

@@ -28,6 +28,7 @@ mod namespace_object;
 mod primitive_object;
 mod script_object;
 mod stage_object;
+mod bytearray_object;
 
 pub use crate::avm2::object::array_object::ArrayObject;
 pub use crate::avm2::object::dispatch_object::DispatchObject;
@@ -38,6 +39,7 @@ pub use crate::avm2::object::namespace_object::NamespaceObject;
 pub use crate::avm2::object::primitive_object::PrimitiveObject;
 pub use crate::avm2::object::script_object::ScriptObject;
 pub use crate::avm2::object::stage_object::StageObject;
+pub use crate::avm2::object::bytearray_object::{ByteArrayObject, ByteArrayObjectData};
 
 /// Represents an object that can be directly interacted with by the AVM2
 /// runtime.
@@ -53,7 +55,8 @@ pub use crate::avm2::object::stage_object::StageObject;
         StageObject(StageObject<'gc>),
         DomainObject(DomainObject<'gc>),
         EventObject(EventObject<'gc>),
-        DispatchObject(DispatchObject<'gc>)
+        DispatchObject(DispatchObject<'gc>),
+        ByteArrayObject(ByteArrayObject<'gc>)
     }
 )]
 pub trait TObject<'gc>: 'gc + Collect + Debug + Into<Object<'gc>> + Clone + Copy {
@@ -832,6 +835,14 @@ pub trait TObject<'gc>: 'gc + Collect + Debug + Into<Object<'gc>> + Clone + Copy
         None
     }
 
+    /// Unwrap this object as bytearray.
+    fn as_bytearray(&self) -> Option<Ref<Vec<u8>>> {
+        None
+    }
+
+    fn as_bytearray_mut(&self, mc: MutationContext<'gc, '_>) -> Option<RefMut<Vec<u8>>> {
+        None
+    }
     /// Unwrap this object as mutable array storage.
     fn as_array_storage_mut(
         &self,
