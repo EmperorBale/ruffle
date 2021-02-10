@@ -2,6 +2,7 @@
 
 use crate::avm2::activation::Activation;
 use crate::avm2::array::ArrayStorage;
+use crate::avm2::bytearray::ByteArrayStorage;
 use crate::avm2::class::Class;
 use crate::avm2::domain::Domain;
 use crate::avm2::events::{DispatchList, Event};
@@ -39,7 +40,7 @@ pub use crate::avm2::object::namespace_object::NamespaceObject;
 pub use crate::avm2::object::primitive_object::PrimitiveObject;
 pub use crate::avm2::object::script_object::ScriptObject;
 pub use crate::avm2::object::stage_object::StageObject;
-pub use crate::avm2::object::bytearray_object::{ByteArrayObject, ByteArrayObjectData};
+pub use crate::avm2::object::bytearray_object::ByteArrayObject;
 
 /// Represents an object that can be directly interacted with by the AVM2
 /// runtime.
@@ -836,11 +837,11 @@ pub trait TObject<'gc>: 'gc + Collect + Debug + Into<Object<'gc>> + Clone + Copy
     }
 
     /// Unwrap this object as bytearray.
-    fn as_bytearray(&self) -> Option<Ref<Vec<u8>>> {
+    fn as_bytearray(&self) -> Option<Ref<ByteArrayStorage>> {
         None
     }
 
-    fn as_bytearray_mut(&self, mc: MutationContext<'gc, '_>) -> Option<RefMut<Vec<u8>>> {
+    fn as_bytearray_mut(&self, mc: MutationContext<'gc, '_>) -> Option<RefMut<ByteArrayStorage>> {
         None
     }
     /// Unwrap this object as mutable array storage.
