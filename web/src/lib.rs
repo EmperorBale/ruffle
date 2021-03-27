@@ -35,6 +35,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Once;
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::{cell::RefCell, error::Error, num::NonZeroI32};
 use wasm_bindgen::{prelude::*, JsCast, JsValue};
@@ -44,6 +45,7 @@ use web_sys::{
 };
 
 static RUFFLE_GLOBAL_PANIC: Once = Once::new();
+
 
 thread_local! {
     /// We store the actual instances of the ruffle core in a static pool.
@@ -501,6 +503,9 @@ impl Ruffle {
             has_focus: false,
             trace_observer,
         };
+        let allow_callbacks: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+
+        let allow_callbacks_cloned = allow_callbacks.clone();
 
         // Prevent touch-scrolling on canvas.
         canvas.style().set_property("touch-action", "none").unwrap();
@@ -535,7 +540,11 @@ impl Ruffle {
 
             // Create mouse move handler.
             {
+                let callback_allowed = allow_callbacks.clone();
                 let mouse_move_callback = Closure::wrap(Box::new(move |js_event: PointerEvent| {
+                    if !(*callback_allowed).load(Ordering::Relaxed) {
+                        return;
+                    }
                     INSTANCES.with(move |instances| {
                         let instances = instances.borrow();
                         if let Some(instance) = instances.get(index) {
@@ -566,7 +575,11 @@ impl Ruffle {
 
             // Create mouse down handler.
             {
+                let callback_allowed = allow_callbacks.clone();
                 let mouse_down_callback = Closure::wrap(Box::new(move |js_event: PointerEvent| {
+                    if !(*callback_allowed).load(Ordering::Relaxed) {
+                        return;
+                    }
                     INSTANCES.with(move |instances| {
                         let instances = instances.borrow();
                         if let Some(instance) = instances.get(index) {
@@ -605,8 +618,12 @@ impl Ruffle {
             // Create player mouse down handler.
             {
                 let window = window.clone();
+                let callback_allowed = allow_callbacks.clone();
                 let player_mouse_down_callback =
                     Closure::wrap(Box::new(move |_js_event: PointerEvent| {
+                        if !(*callback_allowed).load(Ordering::Relaxed) {
+                            return;
+                        }
                         INSTANCES.with(|instances| {
                             let instances = instances.borrow();
                             if let Some(instance) = instances.get(index) {
@@ -631,8 +648,12 @@ impl Ruffle {
 
             // Create window mouse down handler.
             {
+                let callback_allowed = allow_callbacks.clone();
                 let window_mouse_down_callback =
                     Closure::wrap(Box::new(move |_js_event: PointerEvent| {
+                        if !(*callback_allowed).load(Ordering::Relaxed) {
+                            return;
+                        }
                         INSTANCES.with(|instances| {
                             let instances = instances.borrow();
                             if let Some(instance) = instances.get(index) {
@@ -656,7 +677,11 @@ impl Ruffle {
 
             // Create mouse up handler.
             {
+                let callback_allowed = allow_callbacks.clone();
                 let mouse_up_callback = Closure::wrap(Box::new(move |js_event: PointerEvent| {
+                    if !(*callback_allowed).load(Ordering::Relaxed) {
+                        return;
+                    }
                     INSTANCES.with(move |instances| {
                         let instances = instances.borrow();
                         if let Some(instance) = instances.get(index) {
@@ -697,7 +722,11 @@ impl Ruffle {
 
             // Create mouse wheel handler.
             {
+                let callback_allowed = allow_callbacks.clone();
                 let mouse_wheel_callback = Closure::wrap(Box::new(move |js_event: WheelEvent| {
+                    if !(*callback_allowed).load(Ordering::Relaxed) {
+                        return;
+                    }
                     INSTANCES.with(move |instances| {
                         let instances = instances.borrow();
                         if let Some(instance) = instances.get(index) {
@@ -737,7 +766,11 @@ impl Ruffle {
 
             // Create keydown event handler.
             {
+                let callback_allowed = allow_callbacks.clone();
                 let key_down_callback = Closure::wrap(Box::new(move |js_event: KeyboardEvent| {
+                    if !(*callback_allowed).load(Ordering::Relaxed) {
+                        return;
+                    }
                     INSTANCES.with(|instances| {
                         if let Some(instance) = instances.borrow().get(index) {
                             let instance = instance.borrow();
@@ -776,7 +809,11 @@ impl Ruffle {
 
             // Create keyup event handler.
             {
+                let callback_allowed = allow_callbacks.clone();
                 let key_up_callback = Closure::wrap(Box::new(move |js_event: KeyboardEvent| {
+                    if !(*callback_allowed).load(Ordering::Relaxed) {
+                        return;
+                    }
                     js_event.prevent_default();
                     INSTANCES.with(|instances| {
                         if let Some(instance) = instances.borrow().get(index) {
@@ -809,7 +846,11 @@ impl Ruffle {
             }
 
             {
+                let callback_allowed = allow_callbacks.clone();
                 let unload_callback = Closure::wrap(Box::new(move |_| {
+                    if !(*callback_allowed).load(Ordering::Relaxed) {
+                        return;
+                    }
                     INSTANCES.with(|instances| {
                         if let Some(instance) = instances.borrow().get(index) {
                             let instance = instance.borrow();
@@ -834,6 +875,8 @@ impl Ruffle {
 
         // Set initial timestamp and do initial tick to start animation loop.
         ruffle.tick(0.0);
+
+        allow_callbacks_cloned.store(true, Ordering::Relaxed);
 
         Ok(ruffle)
     }
